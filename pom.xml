@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- =========================================================================
+     Minimal Maven app — the "real Java build" Scenario 3 builds & pushes.
+     =========================================================================
+     The ONE field that matters for this scenario is <version> below. The whole
+     point: Harness reads THIS value at build time and tags the ECR image with it
+     (santander-pov-java:1.2.3) — instead of a build number or commit SHA.
+
+     Deliberately dependency-free: plain Java using the JDK's built-in HTTP
+     server, so the Maven/Kaniko build is fast and offline-friendly (no Spring,
+     no downloads). maven-jar-plugin stamps the version into the JAR manifest
+     (Implementation-Version) so the running container can echo it too.
+     ========================================================================= -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.santander.pov</groupId>
+  <artifactId>santander-pov-java</artifactId>
+  <version>1.2.3</version>            <!-- <== Harness reads this and tags the image with it -->
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <build>
+    <finalName>app</finalName>        <!-- => target/app.jar (stable name for the Dockerfile) -->
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.1</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>com.santander.pov.App</mainClass>
+              <!-- stamps Implementation-Version (= project version) into the jar -->
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
