@@ -1,0 +1,16 @@
+inputSet:
+  name: abel trigger
+  identifier: abel_trigger
+  orgIdentifier: SCIB_Global
+  projectIdentifier: JC_Project
+  pipeline:
+    identifier: App_build_and_deploy
+    properties:
+      ci:
+        codebase:
+          connectorRef: jc_github
+          repoName: <+eventPayload.repository.full_name>
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>
