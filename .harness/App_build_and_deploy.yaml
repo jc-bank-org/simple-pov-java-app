@@ -1,0 +1,101 @@
+pipeline:
+  orgIdentifier: SCIB_Global
+  projectIdentifier: JC_Project
+  properties:
+    ci:
+      codebase:
+        connectorRef: <+input>
+        repoName: <+input>
+        build: <+input>
+        sparseCheckout: []
+  stages:
+    - stage:
+        name: Build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: account.santander_k8s_dev
+              namespace: harness-delegate-ng
+              serviceAccountName: harness-cd
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              harnessImageConnectorRef: JC_Docker_Generic_Connector
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  name: Read version
+                  identifier: read_version
+                  template:
+                    templateRef: Read_Version
+                    versionLabel: v1
+              - step:
+                  name: Build and Push to ECR
+                  identifier: build_and_push
+                  template:
+                    templateRef: account.build_and_push_ecr
+                    versionLabel: v1
+                    templateInputs:
+                      type: BuildAndPushECR
+                      spec:
+                        region: eu-west-1
+                        account: "759984737373"
+                        imageName: santander-pov-java
+                        tags:
+                          - <+steps.read_version.output.outputVariables.VERSION>
+    - stage:
+        name: Deploy to Dev
+        identifier: deploy
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: pov_app_java
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      sources:
+                        - identifier: ecr_java
+                          type: Ecr
+                          spec:
+                            tag: <+pipeline.stages.build.spec.execution.steps.read_version.output.outputVariables.VERSION>
+          environment:
+            environmentRef: pov_dev
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: pov_dev_eks
+          execution:
+            steps:
+              - step:
+                  name: Rolling Deployment
+                  identifier: rolling_deployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+            rollbackSteps:
+              - step:
+                  name: Rolling Rollback
+                  identifier: rolling_rollback
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  allowStageExecutions: true
+  identifier: App_build_and_deploy
+  tags: {}
+  name: App - build and deploy
