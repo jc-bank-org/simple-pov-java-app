@@ -10,5 +10,3 @@ src/main/java/com/santander/pov/App.java   :8080  "/" and "/healthz"
 Dockerfile                           maven build -> distroless/java17 (nonroot)
 .dockerignore
 ```
-
-# Hello World
